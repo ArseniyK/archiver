@@ -1,43 +1,68 @@
 import os
+import gtk
 import zipfile,tarfile
 
 class Archiver():
 
 	def __init__(self, main_window)	:
 		self.main_window = main_window
-		self.extract_mimes = ('application/zip','application/x-tar', 'application/x-compressed-tar')
-		self.create_mimes = ('application/octet-stream','inode/directory','text/directory','folder')
-		self.extract_menu = (
-		{
-		'label': 'Archiver',
-		'submenu':
-			(
+		self.archive_mimes = ('application/zip', 'application/x-tar', 'application/x-compressed-tar')
+		self.menu_mimes = ('application/octet-stream', 'inode/directory', 'text/directory', 'folder')
+		self.extract_menu_item = (
 			{
-			'label': 'Extract',
-			'data': False,
-			'callback': self.extract,
+				'label': 'Extract',
+				'data': False,
+				'callback': self.extract,
 			},
 			{
-			'label': 'Extract in folder',
-			'data': True,
-			'callback': self.extract,
+				'label': 'Extract in folder',
+				'data': True,
+				'callback': self.extract,
 			},
-			)
-		},
-		)
-		self.create_menu = (
-		{
-		'label': 'Archiver',
-		'submenu':
-			(
-			{
-			'label': 'Make archive',
-			'callback': self.make_archive,
-			},
-			)
-		},
 		)
 
+		self.extract_menu = gtk.Menu()
+		for item in self.extract_menu_item:
+			self.extract_menu.append(self.main_window.menu_manager.create_menu_item(item))
+
+
+		self.create_menu_item = (
+			{
+				'label': 'Make archive',
+				'callback': self.make_archive,
+			},
+		)
+
+		self.create_menu = gtk.Menu()
+		for item in self.create_menu_item:
+			self.create_menu.append(self.main_window.menu_manager.create_menu_item(item))
+
+		self.archiver_menu = self.main_window.menu_manager.create_menu_item(
+			{
+				'label': 'Archiver',
+				'submenu': ''
+			}
+		)
+		self.archiver_menu.connect("activate", self.expand_menu)
+
+	def expand_menu(self, data):
+		self.archiver_menu.set_submenu(self.create_menu)
+		filename = self.get_selection()
+
+		mime_type = self.main_window.associations_manager.get_mime_type(filename)
+		# try to detect by content
+		if self.main_window.associations_manager.is_mime_type_unknown(mime_type):
+			try:
+				data = self.main_window.associations_manager.get_sample_data(filename, self.main_window.get_active_object().get_provider())
+				mime_type = self.main_window.associations_manager.get_mime_type(data=data)
+			except (IOError), e:
+				if e.errno == 21:
+					mime_type = 'inode/directory'
+
+		is_subset = self.main_window.associations_manager.is_mime_type_subset
+
+		if mime_type in self.archive_mimes:
+				self.archiver_menu.set_submenu(self.extract_menu)
 
 	def get_selection(self):
 		selections = self.main_window.get_active_object()._get_selection()
@@ -76,11 +101,6 @@ class Archiver():
 
 
 def register_plugin(application):
-
 	archiver = Archiver(application)
-
-	for item in archiver.extract_menu:
-		application.register_popup_menu_action(archiver.extract_mimes, application.menu_manager.create_menu_item(item))
-	for item in archiver.create_menu:
-		application.register_popup_menu_action(archiver.create_mimes, application.menu_manager.create_menu_item(item))
+	application.register_popup_menu_action(archiver.menu_mimes, archiver.archiver_menu)
 
