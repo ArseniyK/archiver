@@ -86,7 +86,6 @@ class Archiver():
 
 	def make_archive(self, widget, data):
 		filepath = self.get_selection()
-		print filepath
 		zfile = filepath.rstrip('/') + '.zip'
 		filepath = filepath.rstrip('/')
 		zf = zipfile.ZipFile(zfile, mode='w')
