@@ -49,20 +49,12 @@ class Archiver():
 		self.archiver_menu.set_submenu(self.create_menu)
 		filename = self.get_selection()
 
-		mime_type = self.main_window.associations_manager.get_mime_type(filename)
-		# try to detect by content
-		if self.main_window.associations_manager.is_mime_type_unknown(mime_type):
-			try:
-				data = self.main_window.associations_manager.get_sample_data(filename, self.main_window.get_active_object().get_provider())
-				mime_type = self.main_window.associations_manager.get_mime_type(data=data)
-			except (IOError), e:
-				if e.errno == 21:
-					mime_type = 'inode/directory'
-
-		is_subset = self.main_window.associations_manager.is_mime_type_subset
-
-		if mime_type in self.archive_mimes:
-				self.archiver_menu.set_submenu(self.extract_menu)
+		try:
+			if zipfile.is_zipfile(filename) or tarfile.is_tarfile(filename):
+					self.archiver_menu.set_submenu(self.extract_menu)
+		except IOError as e:
+			if e.errno == 21:
+				pass
 
 	def get_selection(self):
 		selections = self.main_window.get_active_object()._get_selection()
